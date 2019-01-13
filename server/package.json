@@ -1,0 +1,54 @@
+{
+  "name": "game_server",
+  "version": "1.0.0",
+  "description": "no need,it is just a demo.",
+  "main": "lsfServer.js",
+  "scripts": {
+    "test": "none"
+  },
+  "repository": {
+    "type": "git",
+    "url": "none"
+  },
+  "keywords": [
+    "none"
+  ],
+  "author": "ahkong0429",
+  "license": "ISC",
+  "dependencies": {
+    "babel-runtime": "^6.26.0",
+    "bluebird": "^3.5.3",
+    "body-parser": "^1.18.3",
+    "cheerio": "^1.0.0-rc.2",
+    "client-sessions": "^0.8.0",
+    "cors": "^2.8.1",
+    "excel-export": "^0.5.1",
+    "express": "^4.16.4",
+    "express-session": "^1.15.6",
+    "formidable": "^1.2.1",
+    "getmac": "^1.4.3",
+    "iconv-lite": "^0.4.24",
+    "jsonwebtoken": "^8.4.0",
+    "lodash": "^4.17.11",
+    "mongodb": "^3.1.0-beta4",
+    "multer": "^1.4.1",
+    "mysql": "^2.15.0",
+    "mysql2": "^1.6.4",
+    "node-schedule": "^1.2.5",
+    "node-telegram-bot-api": "^0.30.0",
+    "node-uuid": "^1.4.8",
+    "nodemailer": "^4.4.0",
+    "request": "^2.87.0",
+    "session-file-store": "^1.2.0",
+    "socket.io": "^2.2.0",
+    "sync-request": "^6.0.0",
+    "telegraf": "^3.25.0",
+    "translation.js": "^0.7.5",
+    "ws": "^6.1.2",
+    "xlsx": "^0.14.1",
+    "xlsx-style": "^0.8.13"
+  },
+  "devDependencies": {
+    "mysqls": "^1.0.0"
+  }
+}
