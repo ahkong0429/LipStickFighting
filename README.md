@@ -1,6 +1,6 @@
 ===
 
-#开发环境
+#开发环境#
 cocos creator v2.0.6
 nodejs v8.8.1
 npm 6.5.0
