@@ -1,5 +1,6 @@
 const GJS = require("./global");
 const AlertPath = 'Canvas/JS/Alert';
+const shortid = require('shortid');
 var Alert;
 
 cc.Class({
@@ -16,6 +17,15 @@ cc.Class({
   onLoad() {
     // 初始化公用组件
     Alert = cc.find(AlertPath).getComponent('Alert');
+    // 生成一个sid
+    var pre = 'lsf_';
+    var sid = cc.sys.localStorage.getItem('sid');
+    if (!sid) {
+      sid = pre + shortid.generate();
+      cc.sys.localStorage.setItem('sid', sid);
+    }
+    GJS.sid = sid;
+    // cc.log(sid);
     this.refreshCompLang();
   },
 
@@ -31,35 +41,11 @@ cc.Class({
     var self = this;
     this.stopRegist = true;
     this.showLoading();
-    GJS.sendPostRequest(GJS.apiDic['registTraveler'], { time: new Date().getTime(), lang: GJS.lang }, (res) => {
-      // let success = '';
-      if (res.code == '100') {
-        // success = success + "\r\n"
-        //   + "ID:" + res.data.username + "\r\n"
-        //   + GJS.tips[GJS.lang].password + ":" + res.data.password + "\r\n"
-        //   + GJS.tips[GJS.lang].regTip
-        GJS.setToken(res.data.token);
-        GJS.setID(res.data.username);
-        cc.director.preloadScene('user', () => {
-          self.fullLoading();
-          // cc.director.loadScene('user');
-        });
-      }
+    cc.director.preloadScene('main', () => {
       self.stopRegist = false;
-      // Alert.show(
-      //   GJS.httpCodeDic[GJS.lang][res.code] + success,
-      //   () => {
-      //     self.stopRegist = false;
-      //     // 弹出登录层
-      //     // self.popInLoginLayout();
-      //     // 自动输入账号密码
-      //     // self.autoTypeInUnameAndPwd(res.data.username, res.data.password);
-      //   },
-      //   () => {
-      //     self.stopRegist = false;
-      //   }
-      // )
-    })
+      self.fullLoading();
+      // cc.director.loadScene('main');
+    });
   },
 
   onChooseLang(node, data) {
@@ -78,30 +64,24 @@ cc.Class({
   },
 
   fullLoading() {
-    if (this.loadingLay.node.active) {
-      this.progressBar.progress = 1;
-      this.protxt.string = '100%';
-    }
     // 连接socket
     GJS.connSocket();
     var nextFun = cc.callFunc(function () {
-      cc.director.loadScene('user');
+      cc.director.loadScene('main');
     });
     var ac = cc.sequence(
-      cc.fadeOut(0.7),
+      cc.fadeOut(0.2),
       nextFun
     )
     GJS.setOn('conn', (data) => {
       // cc.log(data);
       // 连接成功
       if (data.code == '200') {
-        GJS.socket.emit('TokenVerify', GJS.token, GJS.uid, (rs) => {
-          // cc.log(rs)
-          if (rs.code == '300') {
-            // token验证通过
-            this.progressBar.node.runAction(ac);
-          }
-        });
+        if (this.loadingLay.node.active) {
+          this.progressBar.progress = 1;
+          this.protxt.string = '100%';
+        }
+        this.progressBar.node.runAction(ac);
       }
     })
   },

@@ -6,7 +6,8 @@ cc.Class({
   extends: cc.Component,
 
   properties: {
-    idLabel: cc.Label,
+    // idLabel: cc.Label,
+    idLabel: cc.EditBox,
     chooseHardLabel: cc.Label,
     nowHard: cc.Label,
     chooseWeaponLabel: cc.Label,
@@ -54,7 +55,7 @@ cc.Class({
 
   // 加载语言词典
   refreshCompLang() {
-    this.idLabel.string = 'ID:' + GJS.uid;
+    this.idLabel.string = 'ID:' + GJS.sid;
     this.chooseHardLabel.string = GJS.tips[GJS.lang].chooseHardLabel;
     this.nowHard.string = GJS.tips[GJS.lang][this.hard];
     this.chooseWeaponLabel.string = GJS.tips[GJS.lang].chooseWeaponLabel;
@@ -75,15 +76,17 @@ cc.Class({
 
   onStartClick() {
     let param = {
-      uid: GJS.uid,
+      sid: GJS.sid,
       hard: this.hard,
       weapon: this.weapon,
       fightId: this.fightIdEditBox.string == '' ? 0 : this.fightIdEditBox.string,
     }
+    // cc.log(param);
     this.showLoading();
-    GJS.sendPostRequest(GJS.apiDic['createRoom'], param, (res) => {
-      // cc.log(res);
-    })
+    GJS.socket.emit('JoinRoom', JSON.stringify(param));
+    // GJS.sendPostRequest(GJS.apiDic['createRoom'], param, (res) => {
+    //   // cc.log(res);
+    // })
   },
 
   showLoading() {

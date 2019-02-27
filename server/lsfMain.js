@@ -1,18 +1,13 @@
 'use strict';
+// 常量
 const http = require('http');
 const request = require('sync-request');
 const _ = require('lodash');
 const fs = require('fs');
 const NodeUuid = require('node-uuid');
 const crypto = require('crypto');
-var schedule = require('node-schedule');
-function cryptPwd(password) {
-	var md5 = crypto.createHash('md5');
-	return md5.update(password).digest('hex');
-}
-
+const redis = require('redis');
 const { init, exec, sql, transaction } = require('mysqls')
-
 const jwt = require('jsonwebtoken');
 const secret = 'AKMJ';
 // 不需要token验证的接口
@@ -20,6 +15,20 @@ const public_path = [
 	'/registTraveler', '/login'
 ];
 const token_exp = 1000 * 60 * 60 * 24;//token保存1天的有效期
+const db_pre = "mj_";
+const shortid = require('shortid');
+const room_pre = "Lip_";
+
+// 变量
+var RedClient = redis.createClient(6379, '127.0.0.1');
+var schedule = require('node-schedule');
+var ROOMS = {};
+
+// 函数
+function cryptPwd(password) {
+	var md5 = crypto.createHash('md5');
+	return md5.update(password).digest('hex');
+}
 
 // mysql
 init({
@@ -29,14 +38,12 @@ init({
 	database: 'mj',
 	port: 3306,
 })
-const db_pre = "mj_";
 
 // ws
 // var WebSocketServer = require('ws').Server,
 // 	wss = new WebSocketServer({ port: 8181 });
 // 连接池
 // var clients = {};
-var ROOMS = {};
 // var timer = {};
 
 exports.mainInit = function () {
@@ -61,8 +68,11 @@ Main.prototype = {
 			socket.on('disconnect', () => {
 				if (socket.token) {
 					this.setDisconnet(socket.token);
+					this.io.sockets.in(socket.roomId).emit('LeaveRoom')
 				}
-				this.io.sockets.in(socket.roomId).emit('LeaveRoom')
+				if (socket.sid) {
+					this.setOffRedInfo(socket);
+				}
 			})
 			socket.on('TokenVerify', (token, username, fn) => {
 				jwt.verify(token, secret, (err, decoded) => {
@@ -86,6 +96,77 @@ Main.prototype = {
 					// clients[uid] = socket;
 					fn({ code: '300' });
 				})
+			})
+			// 创建房间
+			socket.on('JoinRoom', (json) => {
+				var obj = JSON.parse(json)
+				if (obj.sid) {
+					socket.sid = obj.sid;
+					// 获取可用房间列表
+					// var num = 1;
+					this.AddClientToRoom(socket, 1, obj, (roomid) => {
+						console.log(`room id ${roomid}`)
+						this.RedhSet(`userlist`, obj.sid, roomid)
+					});
+					// this.RedhGet(`roomlist`, `room${num}`, (json) => {
+					// 	if (json == null) {
+					// 		// 创建
+					// 		socket.rid = num;
+					// 		socket.join(num);
+					// 		this.RedhSet(`roomlist`, `room${num}`, JSON.stringify({
+					// 			rid: num,
+					// 			members: [obj.sid],
+					// 			cfgMain: obj
+					// 		}))
+					// 	} else {
+					// 		// console.log(json);
+					// 		var room = JSON.parse(json);
+					// 		if (room.members.length >= 2) {
+
+					// 		}
+					// 		socket.rid = room.rid;
+					// 		socket.join(room.rid);
+					// 		room.members.push(obj.sid);
+					// 		room.cfgSub = obj;
+					// 		this.RedhSet(`roomlist`, `room${num}`, JSON.stringify(room))
+					// 	}
+					// })
+
+					// this.RedGet(`waitrooms`, (roomsJson) => {
+					// 	if (roomsJson == null) {
+					// 		// 创建一个房间并加入
+					// 		var rid = room_pre + shortid.generate();
+					// 		socket.join(rid);
+					// 		socket.rid = rid;
+					// 		this.RedSet(`waitrooms`, JSON.stringify([rid]));
+					// 		// 更新房间哈希表
+					// 		this.RedhSet(`roomlist`, rid, JSON.stringify({
+					// 			members: [sid],
+					// 			cfg: obj
+					// 		}))
+					// 		// this.RedSet(rid, JSON.stringify([sid]));
+					// 		return;
+					// 	}
+					// 	// 加入一个房间
+					// 	var rooms = JSON.parse(roomsJson);
+
+					// 	// var room = _.find(rooms, (o) => {
+					// 	// 	// 房间人数少于2人并且难度相等
+					// 	// 	return (o.sid.length < 2) && (o.cfg.hard == obj.hard)
+					// 	// })
+					// 	// if (room) {
+					// 	// 	socket.join(room.rid)
+					// 	// 	socket.rid = room.rid;
+					// 	// 	room.sid.push(socket.sid);
+					// 	// 	this.RedSet(ROOMLIST, JSON.stringify([{ rid: rid, sid: [sid], cfg: obj }]));
+					// 	// 	this.RedSet(rid, JSON.stringify([sid]));
+					// 	// 	console.log(`获得一个匹配`);
+					// 	// }
+					// })
+				}
+				// socket.roomId = obj.roomId;
+				// socket.join(obj.roomId);
+				// this.io.sockets.in(obj.roomId).emit('MatchSuccess', json)
 			})
 			// 进入房间
 			socket.on('ChangeRoom', (json) => {
@@ -217,6 +298,125 @@ Main.prototype = {
 		this.apiList();
 
 		this.startTask();
+	},
+
+	// 给客户端分配room
+	AddClientToRoom(socket, num, obj, callback) {
+		this.RedhGet(`roomlist`, `room${num}`, (json) => {
+			if (json == null) {
+				// 创建
+				socket.rid = num;
+				socket.join(num);
+				this.RedhSet(`roomlist`, `room${num}`, JSON.stringify({
+					rid: num,
+					members: [obj]
+				}))
+				return callback(num);
+			} else {
+				// console.log(json);
+				var room = JSON.parse(json);
+				var result = _.find(room, (o) => {
+					return o.sid == obj.sid
+				})
+				if (result) {
+					num = num * 1 + 1;
+					return this.AddClientToRoom(socket, num, obj, callback)
+				}
+				if (room.members.length >= 2) {
+					num = num * 1 + 1;
+					return this.AddClientToRoom(socket, num, obj, callback)
+				}
+				socket.rid = room.rid;
+				socket.join(room.rid);
+				room.members.push(obj);
+				this.RedhSet(`roomlist`, `room${num}`, JSON.stringify(room))
+				return callback(num);
+			}
+		})
+	},
+
+	// 通用redis set
+	RedSet(key, value, callback) {
+		RedClient.set(key, value, (err) => {
+			if (err !== null) {
+				console.log(`redis set ${key} err`);
+				console.log(value);
+				console.log(err);
+				return;
+			}
+			if (callback) {
+				callback()
+			}
+		})
+	},
+
+	// 通用redis get
+	RedGet(key, callback) {
+		RedClient.get(key, (err, res) => {
+			// console.log(err, res);
+			if (err !== null) {
+				console.log(`redis get ${key} err`);
+				console.log(err);
+				return;
+			}
+			if (callback) {
+				callback(res)
+			}
+		})
+	},
+
+	RedDel(key, callback) {
+		RedClient.del(key, (err) => {
+			// console.log(err, res);
+			if (err !== null) {
+				console.log(`redis del ${key} err`);
+				console.log(err);
+				return;
+			}
+			if (callback) {
+				callback()
+			}
+		})
+	},
+
+	RedhSet(key, field, value, callback) {
+		RedClient.hset(key, field, value, (err) => {
+			if (err !== null) {
+				console.log(`redis hset ${key} ${field} err`);
+				console.log(value);
+				console.log(err);
+				return;
+			}
+			if (callback) {
+				callback()
+			}
+		})
+	},
+
+	RedhGet(key, field, callback) {
+		RedClient.hget(key, field, (err, res) => {
+			if (err !== null) {
+				console.log(`redis hget ${key} ${field} err`);
+				console.log(err);
+				return;
+			}
+			if (callback) {
+				callback(res)
+			}
+		})
+	},
+
+	Redhdel(key, field, callback) {
+		RedClient.hdel(key, field, (err) => {
+			if (err !== null) {
+				console.log(`redis hdel ${key} ${field} err`);
+				console.log(err);
+				return;
+			}
+			if (callback) {
+				callback()
+			}
+		})
 	},
 
 	// 广播消息
@@ -363,6 +563,20 @@ Main.prototype = {
 			console.log(sql.table(db_pre + 'user').where({ finding: 1 }).data({ finding: 0 }).update());
 			console.log('resetAllStatus err')
 			console.log(err)
+		})
+	},
+
+	setOffRedInfo(socket) {
+		this.RedhGet(`userlist`, socket.sid, (roomid) => {
+			if (roomid) {
+				this.RedhGet(`roomlist`, `room${roomid}`, (json) => {
+					var room = JSON.parse(json);
+					room.members = _.remove(room.members, (o) => {
+						return o.sid == socket.sid
+					})
+					this.RedhSet(`roomlist`, `room${roomid}`, JSON.stringify(room))
+				})
+			}
 		})
 	},
 

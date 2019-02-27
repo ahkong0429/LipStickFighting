@@ -1,5 +1,5 @@
-const APIurl = "http://lvv.fun:778";
-const WebSocketHost = "http://63.223.103.49:8181";
+const APIurl = "http://lvv.fun:781";
+const WebSocketHost = "http://63.223.103.49:8781";
 const io = require("./socket.io");
 
 var GJS = {
