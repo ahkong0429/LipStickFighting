@@ -1,0 +1,75 @@
+{
+  "cocos-analytics": {
+    "appID": "13798",
+    "appSecret": "959b3ac0037d0f3c2fdce94f8421a9b2",
+    "channel": "",
+    "enable": false,
+    "version": ""
+  },
+  "collision-matrix": [
+    [
+      false,
+      false
+    ],
+    [
+      false,
+      true
+    ]
+  ],
+  "design-resolution-height": 700,
+  "design-resolution-width": 480,
+  "excluded-modules": [
+    "Renderer Texture",
+    "Dynamic Atlas",
+    "LabelOutline",
+    "Mask",
+    "Graphics",
+    "TiledMap",
+    "Spine Skeleton",
+    "DragonBones",
+    "RichText",
+    "MotionStreak",
+    "Widget",
+    "ProgressBar",
+    "ScrollBar",
+    "ScrollView",
+    "Toggle",
+    "PageView",
+    "PageViewIndicator",
+    "Slider",
+    "Layout",
+    "EditBox",
+    "VideoPlayer",
+    "WebView",
+    "Audio",
+    "AudioSource",
+    "NodePool",
+    "StudioComponent",
+    "Native NetWork"
+  ],
+  "facebook": {
+    "appID": "",
+    "audience": {
+      "enable": false
+    },
+    "enable": false,
+    "live": {
+      "enable": false
+    }
+  },
+  "fit-height": true,
+  "fit-width": true,
+  "group-list": [
+    "nowlipsticks",
+    "newlipstick"
+  ],
+  "last-module-event-record-time": 1545376977921,
+  "simulator-orientation": false,
+  "simulator-resolution": {
+    "height": 700,
+    "width": 480
+  },
+  "start-scene": "29fa3ef7-c936-4f6a-bb3d-176c956142fa",
+  "use-customize-simulator": true,
+  "use-project-simulator-setting": true
+}
